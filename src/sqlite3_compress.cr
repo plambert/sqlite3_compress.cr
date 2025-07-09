@@ -2,7 +2,6 @@ require "sqlite3"
 require "sqlite3/type"
 require "compress/gzip"
 require "compress/deflate"
-# require "compress/zip"
 require "compress/zlib"
 
 lib LibSQLite3
@@ -16,20 +15,51 @@ lib LibSQLite3
 end
 
 # :nodoc:
-module SQLite3
+module SQLite3::Compress
+  def self.register_functions(instance, db)
+    check LibSQLite3.create_function(db, "compress_gzip", 1, 1, nil, COMPRESS_GZIP_FN, nil, nil)
+    check LibSQLite3.create_function(db, "gzip", 1, 1, nil, COMPRESS_GZIP_FN, nil, nil)
+    check LibSQLite3.create_function(db, "decompress_gzip", 1, 1, nil, DECOMPRESS_GZIP_FN, nil, nil)
+    check LibSQLite3.create_function(db, "ungzip", 1, 1, nil, DECOMPRESS_GZIP_FN, nil, nil)
+
+    check LibSQLite3.create_function(db, "compress_deflate", 1, 1, nil, COMPRESS_DEFLATE_FN, nil, nil)
+    check LibSQLite3.create_function(db, "deflate", 1, 1, nil, COMPRESS_DEFLATE_FN, nil, nil)
+    check LibSQLite3.create_function(db, "decompress_deflate", 1, 1, nil, DECOMPRESS_DEFLATE_FN, nil, nil)
+    check LibSQLite3.create_function(db, "undeflate", 1, 1, nil, DECOMPRESS_DEFLATE_FN, nil, nil)
+
+    check LibSQLite3.create_function(db, "compress_zlib", 1, 1, nil, COMPRESS_ZLIB_FN, nil, nil)
+    check LibSQLite3.create_function(db, "zlib", 1, 1, nil, COMPRESS_ZLIB_FN, nil, nil)
+    check LibSQLite3.create_function(db, "decompress_zlib", 1, 1, nil, DECOMPRESS_ZLIB_FN, nil, nil)
+    check LibSQLite3.create_function(db, "unzlib", 1, 1, nil, DECOMPRESS_ZLIB_FN, nil, nil)
+
+    check LibSQLite3.create_function(db, "compress", 2, 1, nil, COMPRESS_FN, nil, nil)
+    check LibSQLite3.create_function(db, "decompress", 2, 1, nil, DECOMPRESS_FN, nil, nil)
+  rescue e : SQLite3::Compress::CheckException
+    raise SQLite3::Exception.new(instance)
+  end
+
+  def self.check(code)
+    raise SQLite3::Compress::CheckException.new unless code == 0
+  end
+
+  class CheckException < ::Exception
+    def initialize
+      super("a sqlite error occurred")
+    end
+  end
+
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::COMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  COMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_bytes(argv[0])
-    type = SQLite3.value_string(argv[1])
+    blob = SQLite3::Compress.value_bytes(argv[0])
+    type = SQLite3::Compress.value_string(argv[1])
     result = case type.downcase
              when "gzip"
-               SQLite3.compress_gzip(blob)
+               SQLite3::Compress.compress_gzip(blob)
              when "deflate"
-               SQLite3.compress_deflate(blob)
+               SQLite3::Compress.compress_deflate(blob)
              when "zlib"
-               SQLite3.compress_zlib(blob)
+               SQLite3::Compress.compress_zlib(blob)
              else
                raise "#{type}: unknown compression type"
              end
@@ -38,18 +68,17 @@ module SQLite3
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::DECOMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  DECOMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_bytes(argv[0])
-    type = SQLite3.value_string(argv[1])
+    blob = SQLite3::Compress.value_bytes(argv[0])
+    type = SQLite3::Compress.value_string(argv[1])
     result = case type.downcase
              when "gzip"
-               SQLite3.decompress_gzip(blob)
+               SQLite3::Compress.decompress_gzip(blob)
              when "deflate"
-               SQLite3.decompress_deflate(blob)
+               SQLite3::Compress.decompress_deflate(blob)
              when "zlib"
-               SQLite3.decompress_zlib(blob)
+               SQLite3::Compress.decompress_zlib(blob)
              else
                raise "#{type}: unknown compression type"
              end
@@ -58,74 +87,57 @@ module SQLite3
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::COMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  COMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.compress_gzip(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.compress_gzip(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::DECOMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  DECOMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.decompress_gzip(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.decompress_gzip(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::COMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  COMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.compress_deflate(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.compress_deflate(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::DECOMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  DECOMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.decompress_deflate(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.decompress_deflate(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::COMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  COMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.compress_zlib(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.compress_zlib(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
   # :nodoc:
-  # ameba:disable Naming/ConstantNames
-  SQLite3::DECOMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
+  DECOMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    blob = SQLite3.value_to_bytes(argv[0])
-    result = SQLite3.decompress_zlib(blob)
+    blob = SQLite3::Compress.value_to_bytes(argv[0])
+    result = SQLite3::Compress.decompress_zlib(blob)
     LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
-  end
-
-  # :nodoc:
-  @[Flags]
-  enum FunctionFlag
-    DETERMINISTIC  = 0x000000800
-    DIRECTONLY     = 0x000080000
-    SUBTYPE        = 0x000100000
-    INNOCUOUS      = 0x000200000
-    RESULT_SUBTYPE = 0x001000000
-    SELFORDER1     = 0x002000000
   end
 
   # :nodoc:
@@ -142,9 +154,9 @@ module SQLite3
   def self.value_to_bytes(value : LibSQLite3::SQLite3Value)
     case SQLite3::Type.new(LibSQLite3.value_type(value))
     in SQLite3::Type::BLOB
-      SQLite3.value_bytes(value)
+      SQLite3::Compress.value_bytes(value)
     in SQLite3::Type::TEXT
-      SQLite3.value_string(value).to_slice
+      SQLite3::Compress.value_string(value).to_slice
     in SQLite3::Type::NULL
       Bytes.new(0)
     in SQLite3::Type::INTEGER
@@ -173,7 +185,7 @@ module SQLite3
   # :nodoc:
   def self.compress_gzip(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
-      Compress::Gzip::Writer.open buffer do |output|
+      ::Compress::Gzip::Writer.open buffer do |output|
         IO.copy input, output
       end
     end
@@ -182,7 +194,7 @@ module SQLite3
   # :nodoc:
   def self.decompress_gzip(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
-      Compress::Gzip::Reader.open input do |output|
+      ::Compress::Gzip::Reader.open input do |output|
         IO.copy output, buffer
       end
     end
@@ -191,7 +203,7 @@ module SQLite3
   # :nodoc:
   def self.compress_deflate(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
-      Compress::Deflate::Writer.open buffer do |output|
+      ::Compress::Deflate::Writer.open buffer do |output|
         IO.copy input, output
       end
     end
@@ -200,7 +212,7 @@ module SQLite3
   # :nodoc:
   def self.decompress_deflate(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
-      Compress::Deflate::Reader.open input do |output|
+      ::Compress::Deflate::Reader.open input do |output|
         IO.copy output, buffer
       end
     end
@@ -209,7 +221,7 @@ module SQLite3
   # :nodoc:
   def self.compress_zlib(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
-      Compress::Zlib::Writer.open buffer do |output|
+      ::Compress::Zlib::Writer.open buffer do |output|
         IO.copy input, output
       end
     end
@@ -218,7 +230,7 @@ module SQLite3
   # :nodoc:
   def self.decompress_zlib(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
-      Compress::Zlib::Reader.open input do |output|
+      ::Compress::Zlib::Reader.open input do |output|
         IO.copy output, buffer
       end
     end
@@ -230,23 +242,7 @@ class SQLite3::Connection < DB::Connection
   # :nodoc:
   def initialize(options : ::DB::Connection::Options, sqlite3_options : Options)
     previous_def(options, sqlite3_options)
-    check LibSQLite3.create_function(@db, "compress_gzip", 1, 1, nil, SQLite3::COMPRESS_GZIP_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "gzip", 1, 1, nil, SQLite3::COMPRESS_GZIP_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "decompress_gzip", 1, 1, nil, SQLite3::DECOMPRESS_GZIP_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "ungzip", 1, 1, nil, SQLite3::DECOMPRESS_GZIP_FN, nil, nil)
-
-    check LibSQLite3.create_function(@db, "compress_deflate", 1, 1, nil, SQLite3::COMPRESS_DEFLATE_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "deflate", 1, 1, nil, SQLite3::COMPRESS_DEFLATE_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "decompress_deflate", 1, 1, nil, SQLite3::DECOMPRESS_DEFLATE_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "undeflate", 1, 1, nil, SQLite3::DECOMPRESS_DEFLATE_FN, nil, nil)
-
-    check LibSQLite3.create_function(@db, "compress_zlib", 1, 1, nil, SQLite3::COMPRESS_ZLIB_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "zlib", 1, 1, nil, SQLite3::COMPRESS_ZLIB_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "decompress_zlib", 1, 1, nil, SQLite3::DECOMPRESS_ZLIB_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "unzlib", 1, 1, nil, SQLite3::DECOMPRESS_ZLIB_FN, nil, nil)
-
-    check LibSQLite3.create_function(@db, "compress", 2, 1, nil, SQLite3::COMPRESS_FN, nil, nil)
-    check LibSQLite3.create_function(@db, "decompress", 2, 1, nil, SQLite3::DECOMPRESS_FN, nil, nil)
+    SQLite3::Compress.register_functions(self, @db)
   rescue
     raise DB::ConnectionRefused.new
   end
