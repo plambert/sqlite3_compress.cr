@@ -26,7 +26,6 @@ require "./sqlite3_compress"
 require "http/client"
 require "uri"
 
-# ameba:disable Naming/BlockParameterName
 DB.open "sqlite3:%3Amemory%3A" do |db|
   db.exec "CREATE TABLE example (id INTEGER PRIMARY KEY, url TEXT NOT NULL, gzip_html BLOB NOT NULL)"
   ARGV.map { |arg| URI.parse arg }.each do |url|
