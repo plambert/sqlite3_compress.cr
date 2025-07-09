@@ -7,6 +7,8 @@ authors:
 targets:
   test:
     main: src/test.cr
+  doc_example:
+    main: src/doc_example.cr
 
 dependencies:
   sqlite3:

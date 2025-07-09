@@ -1,27 +1,3 @@
-# sqlite3_compress
-
-Adds compression/decompression functions to [crystal-sqlite3](https://github.com/crystal-lang/crystal-sqlite3).
-
-Can also serve as an example of how to create custom functions in sqlite.
-
-## Installation
-
-1. Add the dependency to your `shard.yml`:
-
-   ```yaml
-   dependencies:
-     sqlite3_uri:
-       github: plambert/sqlite3_compress.cr
-   ```
-
-2. Run `shards install`
-
-Both `db` and `sqlite3` will be brought in as dependencies by this shard; you don't need
-to specify them separately in your `shard.yml`.
-
-## Usage
-
-```crystal
 require "./sqlite3_compress"
 require "http/client"
 require "uri"
@@ -62,20 +38,3 @@ DB.open "sqlite3:%3Amemory%3A" do |db|
     end
   end
 end
-```
-
-## Development
-
-TODO: Write development instructions here
-
-## Contributing
-
-1. Fork it (<https://github.com/plambert/sqlite3_compress.cr/fork>)
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-## Contributors
-
-- [Paul M. Lambert](https://github.com/plambert) - creator and maintainer

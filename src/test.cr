@@ -2,11 +2,13 @@ require "db"
 require "sqlite3"
 require "./sqlite3_compress"
 
+# :nodoc:
 def do_test(db, data, method : String)
   do_one_test db, data, method
   do_other_test db, data, method
 end
 
+# :nodoc:
 def report_result(result, data, method, sql)
   status = result == data.to_slice ? " OK" : "FAIL"
   printf "[%4s] %s: %d bytes in, %d bytes out, %d delta bytes, sql=%s\n",
@@ -18,12 +20,14 @@ def report_result(result, data, method, sql)
     sql.inspect
 end
 
+# :nodoc:
 def do_one_test(db, data, method : String)
   sql = "SELECT decompress_#{method}(compress_#{method}(?))"
   result = db.query_one sql, data.to_slice, as: Bytes
   report_result result, data, method, sql
 end
 
+# :nodoc:
 def do_other_test(db, data, method : String)
   sql = "SELECT decompress(compress(?, '#{method}'), '#{method}')"
   result = db.query_one sql, data.to_slice, as: Bytes

@@ -9,10 +9,15 @@ lib LibSQLite3
   fun value_type = sqlite3_value_type(SQLite3Value) : Int32
   fun value_blob = sqlite3_value_blob(SQLite3Value) : UInt8*
   fun value_bytes = sqlite3_value_bytes(SQLite3Value) : Int32
+  fun value_double = sqlite3_value_double(SQLite3Value) : Float64
+  fun value_int64 = sqlite3_value_int64(SQLite3Value) : Int64
+  fun value_int = sqlite3_value_int(SQLite3Value) : Int32
   fun result_blob = sqlite3_result_blob(SQLite3Context, UInt8*, Int32) : Void*
 end
 
+# :nodoc:
 module SQLite3
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::COMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
@@ -32,6 +37,7 @@ module SQLite3
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::DECOMPRESS_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
@@ -51,73 +57,67 @@ module SQLite3
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::COMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      STDERR.puts "blob: #{blob.size} bytes"
-      result = SQLite3.compress_gzip(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.compress_gzip(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::DECOMPRESS_GZIP_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      result = SQLite3.decompress_gzip(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.decompress_gzip(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::COMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      result = SQLite3.compress_deflate(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.compress_deflate(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::DECOMPRESS_DEFLATE_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      result = SQLite3.decompress_deflate(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.decompress_deflate(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::COMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      result = SQLite3.compress_zlib(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.compress_zlib(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   # ameba:disable Naming/ConstantNames
   SQLite3::DECOMPRESS_ZLIB_FN = ->(context : LibSQLite3::SQLite3Context, _argc : Int32, argv : LibSQLite3::SQLite3Value*) do
     argv = Slice.new(argv, sizeof(Void*))
-    if SQLite3::Type.new(LibSQLite3.value_type(argv[0])) == SQLite3::Type::BLOB
-      blob = SQLite3.value_bytes(argv[0])
-      result = SQLite3.decompress_zlib(blob)
-      LibSQLite3.result_blob(context, result.to_unsafe, result.size)
-    end
+    blob = SQLite3.value_to_bytes(argv[0])
+    result = SQLite3.decompress_zlib(blob)
+    LibSQLite3.result_blob(context, result.to_unsafe, result.size)
     nil
   end
 
+  # :nodoc:
   @[Flags]
   enum FunctionFlag
     DETERMINISTIC  = 0x000000800
@@ -128,14 +128,33 @@ module SQLite3
     SELFORDER1     = 0x002000000
   end
 
+  # :nodoc:
   def self.value_bytes(val : LibSQLite3::SQLite3Value) : Bytes
     Bytes.new(LibSQLite3.value_blob(val), LibSQLite3.value_bytes(val))
   end
 
+  # :nodoc:
   def self.value_string(val : LibSQLite3::SQLite3Value) : String
     String.new(LibSQLite3.value_text(val), LibSQLite3.value_bytes(val))
   end
 
+  # :nodoc:
+  def self.value_to_bytes(value : LibSQLite3::SQLite3Value)
+    case SQLite3::Type.new(LibSQLite3.value_type(value))
+    in SQLite3::Type::BLOB
+      SQLite3.value_bytes(value)
+    in SQLite3::Type::TEXT
+      SQLite3.value_string(value).to_slice
+    in SQLite3::Type::NULL
+      Bytes.new(0)
+    in SQLite3::Type::INTEGER
+      LibSQLite3.value_int64(value).to_s.to_slice
+    in SQLite3::Type::FLOAT
+      LibSQLite3.value_double(value).to_s.to_slice
+    end
+  end
+
+  # :nodoc:
   def self.compress(blob : Bytes, &) : Bytes
     buffer = IO::Memory.new
     input = IO::Memory.new blob, writeable: false
@@ -143,6 +162,7 @@ module SQLite3
     buffer.to_slice
   end
 
+  # :nodoc:
   def self.decompress(blob : Bytes, &) : Bytes
     buffer = IO::Memory.new
     input = IO::Memory.new blob, writeable: false
@@ -150,6 +170,7 @@ module SQLite3
     buffer.to_slice
   end
 
+  # :nodoc:
   def self.compress_gzip(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
       Compress::Gzip::Writer.open buffer do |output|
@@ -158,6 +179,7 @@ module SQLite3
     end
   end
 
+  # :nodoc:
   def self.decompress_gzip(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
       Compress::Gzip::Reader.open input do |output|
@@ -166,6 +188,7 @@ module SQLite3
     end
   end
 
+  # :nodoc:
   def self.compress_deflate(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
       Compress::Deflate::Writer.open buffer do |output|
@@ -174,6 +197,7 @@ module SQLite3
     end
   end
 
+  # :nodoc:
   def self.decompress_deflate(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
       Compress::Deflate::Reader.open input do |output|
@@ -182,6 +206,7 @@ module SQLite3
     end
   end
 
+  # :nodoc:
   def self.compress_zlib(blob : Bytes) : Bytes
     self.compress blob do |buffer, input|
       Compress::Zlib::Writer.open buffer do |output|
@@ -190,6 +215,7 @@ module SQLite3
     end
   end
 
+  # :nodoc:
   def self.decompress_zlib(blob : Bytes) : Bytes
     self.decompress blob do |buffer, input|
       Compress::Zlib::Reader.open input do |output|
@@ -199,7 +225,9 @@ module SQLite3
   end
 end
 
+# :nodoc:
 class SQLite3::Connection < DB::Connection
+  # :nodoc:
   def initialize(options : ::DB::Connection::Options, sqlite3_options : Options)
     previous_def(options, sqlite3_options)
     check LibSQLite3.create_function(@db, "compress_gzip", 1, 1, nil, SQLite3::COMPRESS_GZIP_FN, nil, nil)
