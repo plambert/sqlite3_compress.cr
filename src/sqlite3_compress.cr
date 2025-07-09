@@ -4,18 +4,29 @@ require "compress/gzip"
 require "compress/deflate"
 require "compress/zlib"
 
-lib LibSQLite3
-  fun value_type = sqlite3_value_type(SQLite3Value) : Int32
-  fun value_blob = sqlite3_value_blob(SQLite3Value) : UInt8*
-  fun value_bytes = sqlite3_value_bytes(SQLite3Value) : Int32
-  fun value_double = sqlite3_value_double(SQLite3Value) : Float64
-  fun value_int64 = sqlite3_value_int64(SQLite3Value) : Int64
-  fun value_int = sqlite3_value_int(SQLite3Value) : Int32
-  fun result_blob = sqlite3_result_blob(SQLite3Context, UInt8*, Int32) : Void*
-end
-
-# :nodoc:
+# Adds compression/decompression functions to [crystal-sqlite3](https://github.com/crystal-lang/crystal-sqlite3).
+#
+# Functions added are:
+#
+#   `COMPRESS(data, method)`
+#     Returns the data compressed with the given method.
+#     `method` must be a string, one of: `gzip`, `deflate`, or `zlib`
+#
+#   `DECOMPRESS(data, method)`
+#     Decompresses the data that has been previously compressed with the given method.
+#     `method` must be a string, one of: `gzip`, `deflate`, or `zlib`
+#
+# Convenience functions are also included that include the method in the name:
+#
+#  Gzip:
+#    `COMPRESS_GZIP(data)`, `GZIP(data)`, `DECOMPRESS_GZIP(data)`, and `UNGZIP(data)`
+#  Deflate:
+#    `COMPRESS_DEFLATE(data)`, `DEFLATE(data)`, `DECOMPRESS_DEFLATE(data)`, and `UNDEFLATE(data)`
+#  Zlib:
+#    `COMPRESS_ZLIB(data)`, `ZLIB(data)`, `DECOMPRESS_ZLIB(data)`, and `UNZLIB(data)`
+#
 module SQLite3::Compress
+  # Register each function with the database library
   def self.register_functions(instance, db)
     check LibSQLite3.create_function(db, "compress_gzip", 1, 1, nil, COMPRESS_GZIP_FN, nil, nil)
     check LibSQLite3.create_function(db, "gzip", 1, 1, nil, COMPRESS_GZIP_FN, nil, nil)
@@ -38,11 +49,14 @@ module SQLite3::Compress
     raise SQLite3::Exception.new(instance)
   end
 
+  # :nodoc:
   def self.check(code)
     raise SQLite3::Compress::CheckException.new unless code == 0
   end
 
+  # :nodoc:
   class CheckException < ::Exception
+    # :nodoc:
     def initialize
       super("a sqlite error occurred")
     end
@@ -237,7 +251,6 @@ module SQLite3::Compress
   end
 end
 
-# :nodoc:
 class SQLite3::Connection < DB::Connection
   # :nodoc:
   def initialize(options : ::DB::Connection::Options, sqlite3_options : Options)
@@ -246,4 +259,14 @@ class SQLite3::Connection < DB::Connection
   rescue
     raise DB::ConnectionRefused.new
   end
+end
+
+lib LibSQLite3
+  fun value_type = sqlite3_value_type(SQLite3Value) : Int32
+  fun value_blob = sqlite3_value_blob(SQLite3Value) : UInt8*
+  fun value_bytes = sqlite3_value_bytes(SQLite3Value) : Int32
+  fun value_double = sqlite3_value_double(SQLite3Value) : Float64
+  fun value_int64 = sqlite3_value_int64(SQLite3Value) : Int64
+  fun value_int = sqlite3_value_int(SQLite3Value) : Int32
+  fun result_blob = sqlite3_result_blob(SQLite3Context, UInt8*, Int32) : Void*
 end
