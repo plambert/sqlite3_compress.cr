@@ -1,0 +1,14 @@
+version: 2.0
+shards:
+  db:
+    git: https://github.com/crystal-lang/crystal-db.git
+    version: 0.13.1
+
+  sqlite3:
+    git: https://github.com/crystal-lang/crystal-sqlite3.git
+    version: 0.21.0
+
+  sqlite3_uri:
+    git: https://github.com/plambert/sqlite3_uri.cr.git
+    version: 0.1.0+git.commit.046d879215b7333b7ffeca40d8b0eacfe14d64e7
+
